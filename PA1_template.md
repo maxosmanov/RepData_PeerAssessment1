@@ -507,7 +507,7 @@ plot(average_number_weekday$Group.1, average_number_weekday$x, type = "l", xlab 
 plot(average_number_weekend$Group.1, average_number_weekend$x, type = "l",  xlab = 'time interval', ylab = 'average number of steps', main =  'average number os steps during weekends')
 ```
 
-![](figure/panel plot-1.png)<!-- -->
+![](figure/panel-plot-1.png)<!-- -->
 
 
 

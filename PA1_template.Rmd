@@ -157,7 +157,7 @@ average_number_weekend = aggregate(data_weekends$steps, by=list(data_weekends$in
 There is a difference in activity during working days and weekends. During the weekdays the peak of activity arise at certain time interval (most ptobably before work), whereas during weekends there more peaks but of smallar magnitude, This can be explained that during weekend people can go for a jog at any time of the day (in contrast to weekdays). However, it seems that people prefer to go for a jog at the beginning of every hour which explained small peaks during weekends.
 
 
-```{r "panel plot", echo = TRUE, fig.path= 'figure/'}
+```{r "panel-plot", echo = TRUE, fig.path= 'figure/'}
 par(mfrow=c(2,1))
 plot(average_number_weekday$Group.1, average_number_weekday$x, type = "l", xlab = 'time interval', ylab = 'average number of steps',  main =  'average number os steps during weekdays')
 

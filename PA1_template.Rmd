@@ -1,25 +1,176 @@
 ---
-title: "Reproducible Research: Peer Assessment 1"
-output: 
+title: 'Reproducible Research: Peer Assessment 1'
+output:
   html_document:
-    keep_md: true
+    keep_md: yes
 ---
 
 
 ## Loading and preprocessing the data
+Firstly we check the working directory (and switch it if necessary) and unzip the data file. Thereafter we read the csv into the data frame 
 
+```{r, echo = TRUE}
+getwd()
+#setwd()
+file = unzip("activity.zip")
+data_original = read.csv("activity.csv")
+```
+
+
+The dataset contains 3 variables <code>steps, data, interval</code> which we do not transform at this stage.
 
 
 ## What is mean total number of steps taken per day?
+Despite the large  amount of observations (17568), the dataset contains information related to only 61 days as we can see by running the following code
 
+```{r echo = TRUE}
+print(unique(data_original$date))
+```
+
+Therefore we create a new dataset <code>total_number</code> which contains only 61 rows with the total amount of steps for each day. We ignore observations with missing steps.
+```{r, echo = TRUE}
+total_number = aggregate(data_original$steps, by=list(data_original$date), FUN = sum, na.rm = TRUE)
+```
+
+The histogram shows that the distribution is far from the normal distribution which is due to the fact that many observations are missed.
+
+
+```{r "hist1", echo = TRUE, fig.path= 'figure/'}
+hist(total_number$x, xlab = 'daily number of steps', main ='Histogram of daily number of steps')
+```
+
+
+The mean value of steps is 9354,22 whereas the median is 10395. We computed these values by means of the following commands
+
+
+```{r, echo = TRUE}
+mean(total_number$x, na.rm = TRUE )
+median(total_number$x, na.rm = TRUE)
+```
 
 
 ## What is the average daily activity pattern?
 
+After the exploration of the daily information we want to understand how the activity depends on time interval (or in other words on time). To this end we create the new dataset <code>average_number</code> containing information about the average number of steps for each time period
+
+```{r, echo = TRUE}
+average_number = aggregate(data_original$steps, by=list(data_original$interval), FUN = mean, na.rm = TRUE)
+```
+
+
+where again we ignored missing values. 
+
+The scatter plot shows that there is an activity peak which probably corresponds to the beginning of the day, when majority of people have a jog. 
+
+```{r "ts1", echo = TRUE, fig.path= 'figure/'}
+plot(average_number$Group.1, average_number$x, type = "l", xlab = 'time interval', ylab = 'average number of steps')
+```
+
+The time interval corresponding to the activity peak is equal to 835
+```{r, echo = TRUE}
+subset(average_number, x == max(average_number$x)) 
+```
 
 
 ## Imputing missing values
+However, our analysis is incomplete because we exclude from the consideration missing values. To estimate its importance we firstly compute the fraction of obserations with missing values 
 
+
+```{r, echo = TRUE}
+sum(is.na(data_original$steps))/length(data_original$steps)
+```
+More than 13% of observations are missed. This can lead to potentially wrong predictions, therefore we need to input some values instead of the missing values. The most obvious way is to replace missing values with the mean number of steps performed during the corresponding time interval. However, we apply more elaborated technique called *multiple imputation* which is an iterative process of probabilistic stimation of missing values based on avaliable information in the dataset. This is done with the R package *mice*
+
+
+```{r, echo = TRUE, cache = TRUE}
+library(mice)
+
+imputed_data= mice(data_original, m=5, maxit = 50, method = 'pmm', seed = 500)
+
+data_imputed = data_original
+data_imputed$steps = as.numeric(complete(imputed_data)$steps)
+```
+where we created a new dataset <code>data_imputed</code> identical to the original one with replaced missing values. 
+
+Then similarly to procedures above we plot the histogram of total steps during a day and the scatter plot which shows activity during time intervals. However, this analysis is performed based on the new dataset without missing values. 
+
+
+```{r "hist2", echo = TRUE, fig.path= 'figure/'}
+total_number_imputed = aggregate(data_imputed$steps, by=list(data_imputed$date), FUN = sum, na.rm = TRUE)
+
+hist(total_number_imputed$x,  xlab = 'daily number of steps', main ='Histogram of daily number of steps')
+```
+
+The new histogram is much closer to the normal distribution than the previous one. The mean and median number of daily steps can be computed as follows
+
+.
+```{r, echo = TRUE}
+mean(total_number_imputed$x)
+median(total_number_imputed$x)
+```
+
+and their values are much closer to each other than above.
+
+The scatter plot of the average activity during time periods is also slightly different from the previous one. However, still there is a peak of activity 
+
+```{r "ts2", echo = TRUE, fig.path= 'figure/'}
+average_number_imputed = aggregate(data_imputed$steps, by=list(data_imputed$interval), FUN = mean)
+
+plot(average_number_imputed$Group.1, average_number_imputed$x, type = "l", xlab = 'time interval', ylab = 'average number of steps')
+```
+
+
+The time interval corresponding to the activity peak is the same as before the imputation and equal to 835
+```{r, echo = TRUE}
+subset(average_number_imputed, x == max(average_number_imputed$x)) 
+```
 
 
 ## Are there differences in activity patterns between weekdays and weekends?
+
+Finally, we would like to observe whether there is a difference between weekday and weeekenc activity. To explore this we create the new factor variable <code>wDay</code> which is TRUE for weekdays and is FALSE for weekends 
+
+
+```{r, echo = TRUE}
+Sys.setlocale("LC_ALL","English")
+weekdays1 <- c('Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday')
+#weekdays(as.Date(data_original$date))
+data_imputed$wDay = factor((weekdays(as.Date(data_imputed$date)) %in% weekdays1), levels=c(FALSE, TRUE), labels=c('weekend', 'weekday')) 
+```
+      
+      
+
+
+Then we plot average activity for weekdays and weekends
+
+```{r, echo = TRUE}
+data_weekdays = subset(data_imputed, wDay == "weekday")
+data_weekends = subset(data_imputed, wDay == "weekend")
+
+average_number_weekday = aggregate(data_weekdays$steps, by=list(data_weekdays$interval), FUN = mean, na.rm = TRUE)
+
+average_number_weekend = aggregate(data_weekends$steps, by=list(data_weekends$interval), FUN = mean, na.rm = TRUE)
+```
+
+
+
+There is a difference in activity during working days and weekends. During the weekdays the peak of activity arise at certain time interval (most ptobably before work), whereas during weekends there more peaks but of smallar magnitude, This can be explained that during weekend people can go for a jog at any time of the day (in contrast to weekdays). However, it seems that people prefer to go for a jog at the beginning of every hour which explained small peaks during weekends.
+
+
+```{r "panel plot", echo = TRUE, fig.path= 'figure/'}
+par(mfrow=c(2,1))
+plot(average_number_weekday$Group.1, average_number_weekday$x, type = "l", xlab = 'time interval', ylab = 'average number of steps',  main =  'average number os steps during weekdays')
+
+
+plot(average_number_weekend$Group.1, average_number_weekend$x, type = "l",  xlab = 'time interval', ylab = 'average number of steps', main =  'average number os steps during weekends')
+```
+
+
+
+
+
+
+
+
+         
+
